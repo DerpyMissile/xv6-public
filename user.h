@@ -24,7 +24,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int hello(int); // J.H.
-int exit(int status);
+int exit2(int status);
 
 // ulib.c
 int stat(const char*, struct stat*);

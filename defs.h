@@ -121,7 +121,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            hello(void); // J.H.
-void            exit(int status);
+void            exit2(int status);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
