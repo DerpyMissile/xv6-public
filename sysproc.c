@@ -91,7 +91,7 @@ sys_uptime(void)
 }
 
 int
-sys_hello(void) {
+sys_hello(int) {
   hello();
   return 0;
 }
