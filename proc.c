@@ -540,7 +540,7 @@ hello(void) {
 }
 
 void
-exit(void)
+exit(int status)
 {
   struct proc *curproc = myproc();
   struct proc *p;
