@@ -105,3 +105,11 @@ int sys_exit2(void){
 
   return 0;
 }
+
+int sys_wait2(void){
+  int status;
+
+  if(argint(0, &status) < 0)
+    return -1;
+  return wait2(status);
+}
