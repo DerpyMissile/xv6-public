@@ -95,3 +95,8 @@ sys_hello(int) {
   hello();
   return 0;
 }
+
+int sys_exit(int status){
+  exit(status);
+  return 0;
+}
