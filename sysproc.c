@@ -107,9 +107,13 @@ int sys_exit2(void){
 }
 
 int sys_wait2(void){
-  int status;
+  int *status;
 
-  if(argint(0, &status) < 0)
+ //&status => int **status
+
+ //char **status
+  if(argptr(0, (char**)&status, sizeof(int*)) < 0)
     return -1;
   return wait2(status);
+  
 }

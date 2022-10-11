@@ -7,24 +7,24 @@ int main(int argc, char *argv[])
 {
 	
 	int exitWait(void);
-	int waitPid(void);
+	//int waitPid(void);
 
   printf(1, "\n This program tests the correctness of your lab#1\n");
   
   if (atoi(argv[1]) == 1)
 	exitWait();
-  else if (atoi(argv[1]) == 2)
-	waitPid();
-  else 
-   printf(1, "\ntype \"%s 1\" to test exit and wait, \"%s 2\" to test waitpid\n", argv[0], argv[0]);
+  //else if (atoi(argv[1]) == 2)
+	//waitPid();
+  //else 
+  // printf(1, "\ntype \"%s 1\" to test exit and wait, \"%s 2\" to test waitpid\n", argv[0], argv[0]);
   
     // End of test
-	 exit2(0);
+	 //exit();
 	 return 0;
  }
   
 int exitWait(void) {
-	  int pid, ret_pid, exit_status;
+	  int pid/*, ret_pid, exit_status*/;
     int i;
   // use this part to test exit(int status) and wait(int* status)
  
@@ -42,8 +42,9 @@ int exitWait(void) {
         exit2(-1);
       } 
     } else if (pid > 0) { // only the parent executes this code
-      ret_pid = wait2(&exit_status);
-      printf(1, "\n This is the parent: child with PID# %d has exited with status %d\n", ret_pid, exit_status);
+      wait();
+      //ret_pid = wait2(&exit_status);
+      //printf(1, "\n This is the parent: child with PID# %d has exited with status %d\n", ret_pid, exit_status);
     } else { // something went wrong with fork system call
 	    printf(2, "\nError using fork\n");
       exit2(-1);
@@ -51,7 +52,7 @@ int exitWait(void) {
   }
   return 0;
 }
-
+/*
 int waitPid(void){
 	
   int ret_pid, exit_status;
@@ -101,3 +102,4 @@ int waitPid(void){
 
   return 0;
 }
+*/
