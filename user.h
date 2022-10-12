@@ -26,6 +26,7 @@ int uptime(void);
 int hello(int); // J.H.
 int exit2(int status);
 int wait2(int *status);
+int waitpid(int pid, int *status, int options);
 
 // ulib.c
 int stat(const char*, struct stat*);

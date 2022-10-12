@@ -23,3 +23,4 @@
 #define SYS_hello  22  // J.H.
 #define SYS_exit2  23
 #define SYS_wait2  24
+#define SYS_waitpid 25

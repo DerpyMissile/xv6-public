@@ -123,6 +123,7 @@ void            yield(void);
 void            hello(void); // J.H.
 void            exit2(int status);
 int             wait2(int *status);
+int             waitpid(int pid, int *status, int options);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

@@ -117,3 +117,17 @@ int sys_wait2(void){
   return wait2(status);
   
 }
+
+int sys_waitpid(void){
+    int *status;
+    int pid;
+
+    if(argint(0, &pid) < 0)
+      return -1;
+ //&status => int **status
+
+ //char **status
+  if(argptr(0, (char**)&status, sizeof(int*)) < 0)
+    return -1;
+  return waitpid(pid, status, 0);
+}
