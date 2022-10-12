@@ -42,7 +42,6 @@ int exitWait(void) {
         exit2(-1);
       } 
     } else if (pid > 0) { // only the parent executes this code
-      wait();
       ret_pid = wait2(&exit_status);
       printf(1, "\n This is the parent: child with PID# %d has exited with status %d\n", ret_pid, exit_status);
     } else { // something went wrong with fork system call

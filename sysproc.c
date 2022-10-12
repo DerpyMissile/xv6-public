@@ -108,11 +108,7 @@ int sys_exit2(void){
 
 int sys_wait2(void){
   int *status;
-
- //&status => int **status
-
- //char **status
-  if(argptr(0, (char**)&status, sizeof(int*)) < 0)
+  if(argptr(0, (char**)&status, sizeof(status)) < 0)
     return -1;
   return wait2(status);
   
@@ -121,13 +117,16 @@ int sys_wait2(void){
 int sys_waitpid(void){
     int *status;
     int pid;
+    int option;
 
     if(argint(0, &pid) < 0)
       return -1;
  //&status => int **status
+    if(argint(0, &option) < 0)
+      return -1;
 
  //char **status
-  if(argptr(0, (char**)&status, sizeof(int*)) < 0)
+  if(argptr(0, (char**)&status, sizeof(status)) < 0)
     return -1;
-  return waitpid(pid, status, 0);
+  return waitpid(pid, status, option);
 }
