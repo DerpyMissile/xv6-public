@@ -352,17 +352,23 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      if(p->prior_val == 31){
+      // if(p->prior_val == 31){
 
+      // }else{
+      //   p->prior_val++;
+      // }
+      int temp2;
+      if(p->prior_val == 31){
+        p.set_prior(31);
       }else{
-        p->prior_val++;
+        p.set_prior(p->prior_val++);
       }
       for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
         if(otherP == p){
 
         }else{
           if(otherP->prior_val != 0){
-            otherP->prior_val--;
+            otherP.set_prior(otherP->prior_val--);
           }
         }
       }
