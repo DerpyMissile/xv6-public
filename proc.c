@@ -323,6 +323,8 @@ void
 scheduler(void)
 {
   struct proc *p;
+  struct proc *temp = p;
+  struct proc *otherP; 
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -333,8 +335,16 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
+      //if(p->state != RUNNABLE)
+      //  continue;
+      //ok so this above 2 lines were round robin's way of doing it, now with prior, we gotta find the lowest prior one
+      if(p->prior_val < temp->prior_val){
+        temp = p;
+      }
+      if(p == &ptable.proc[NPROC-1]){
         continue;
+      }
+      p = temp;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -342,6 +352,20 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      if(p->prior_val == 31){
+
+      }else{
+        p->prior_val++;
+      }
+      for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
+        if(otherP == p){
+
+        }else{
+          if(otherP->prior_val != 0){
+            otherP->prior_val--;
+          }
+        }
+      }
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -668,4 +692,9 @@ waitpid(int pid, int* status, int options)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+void set_prior(int prior_lvl){
+  struct proc *curproc = myproc();
+  curproc->prior_val = prior_lvl;
 }

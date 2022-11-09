@@ -132,3 +132,13 @@ int sys_waitpid(void){
 
   return waitpid(pid, status, option);
 }
+
+int sys_set_prior(void){
+  int prior_lvl;
+  if(argint(0, &prior_lvl) < 0){
+    return -1;
+  }
+
+  set_prior(prior_lvl);
+  return 0;
+}
