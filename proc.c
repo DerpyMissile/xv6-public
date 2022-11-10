@@ -323,7 +323,9 @@ void
 scheduler(void)
 {
   struct proc *p;
-  struct proc *temp = ptable.proc;
+  //struct proc *temp = ptable.proc;
+  //struct proc *temp = ptable.proc;
+  int lowPriority = 100;
   struct proc *otherP; 
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -335,44 +337,43 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE){
-        continue;
-      }
+      //if(p->state != RUNNABLE){
+        //continue;
+      //}
       //ok so this above 2 lines were round robin's way of doing it, now with prior, we gotta find the lowest prior one
-      if(p->prior_val < temp->prior_val){
-        temp = p;
+      if(p->prior_val < lowPriority && p->state == RUNNABLE){
+        lowPriority = p->prior_val;
       }
-      if(p == &ptable.proc[NPROC-1]){
-        continue;
-      }
-      p = temp;
+      //if(p == &ptable.proc[NPROC-1]){
+        //continue;
+      //}
+      //p = temp;
 
+      //if(p->prior_val == 31){
+        //set_prior(31);
+      //}else{
+        //p->prior_val++;
+      //}
+
+
+      for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
+        if(otherP->state != RUNNABLE){
+          continue;
+        }
+        if(otherP->prior_val != lowPriority){
+          if(otherP->prior_val > 0){
+            otherP->prior_val--;
+          }
+          continue;
+        }
+      }
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      // if(p->prior_val == 31){
-
-      // }else{
-      //   p->prior_val++;
-      // }
-      if(p->prior_val == 31){
-        set_prior(31);
-      }else{
-        set_prior(p->prior_val++);
-      }
-      for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
-        if(otherP == p){
-
-        }else{
-          if(otherP->prior_val != 0){
-            set_prior(otherP->prior_val--);
-          }
-        }
-      }
-
+      p->prior_val++;
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
