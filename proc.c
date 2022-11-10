@@ -346,9 +346,9 @@ scheduler(void)
       }
     }
     
-      //if(p == &ptable.proc[NPROC-1]){
-        //continue;
-      //}
+      // if(p != &ptable.proc[NPROC-1]){
+      //   continue;
+      // }
       //p = temp;
 
       //if(p->prior_val == 31){
@@ -368,7 +368,7 @@ scheduler(void)
           } else {
             otherP->prior_val = 0;
           }
-          continue;
+          //continue;
         }
       
       // Switch to chosen process.  It is the process's job
@@ -706,5 +706,5 @@ waitpid(int pid, int* status, int options)
 
 void set_prior(int prior_lvl){
   struct proc *curproc = myproc();
-  curproc->prior_val = prior_lvl;
+  curproc->prior_val = prior_lvl%32;
 }
