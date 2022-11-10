@@ -344,6 +344,8 @@ scheduler(void)
       if(p->prior_val < lowPriority && p->state == RUNNABLE){
         lowPriority = p->prior_val;
       }
+    }
+    
       //if(p == &ptable.proc[NPROC-1]){
         //continue;
       //}
@@ -361,28 +363,29 @@ scheduler(void)
           continue;
         }
         if(otherP->prior_val != lowPriority){
-          if(otherP->prior_val > 0){
+          if((otherP->prior_val % 31) > 0){
             otherP->prior_val--;
+          } else {
+            otherP->prior_val = 0;
           }
           continue;
         }
-      }
+      
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      p->prior_val++;
-      swtch(&(c->scheduler), p->context);
+      c->proc = otherP;
+      switchuvm(otherP);
+      otherP->state = RUNNING;
+      otherP->prior_val++;
+      swtch(&(c->scheduler), otherP->context);
       switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-    }
+      }
     release(&ptable.lock);
-
   }
 }
 
