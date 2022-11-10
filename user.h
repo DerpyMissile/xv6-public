@@ -27,6 +27,7 @@ int hello(int); // J.H.
 int exit2(int status);
 int wait2(int *status);
 int waitpid(int pid, int *status, int options);
+int set_prior(int prior_lvl);
 
 // ulib.c
 int stat(const char*, struct stat*);

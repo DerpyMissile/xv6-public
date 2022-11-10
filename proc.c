@@ -323,7 +323,7 @@ void
 scheduler(void)
 {
   struct proc *p;
-  struct proc *temp = p;
+  struct proc *temp = ptable.proc;
   struct proc *otherP; 
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -335,8 +335,9 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      //if(p->state != RUNNABLE)
-      //  continue;
+      if(p->state != RUNNABLE){
+        continue;
+      }
       //ok so this above 2 lines were round robin's way of doing it, now with prior, we gotta find the lowest prior one
       if(p->prior_val < temp->prior_val){
         temp = p;
@@ -357,18 +358,17 @@ scheduler(void)
       // }else{
       //   p->prior_val++;
       // }
-      int temp2;
       if(p->prior_val == 31){
-        p.set_prior(31);
+        set_prior(31);
       }else{
-        p.set_prior(p->prior_val++);
+        set_prior(p->prior_val++);
       }
       for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
         if(otherP == p){
 
         }else{
           if(otherP->prior_val != 0){
-            otherP.set_prior(otherP->prior_val--);
+            set_prior(otherP->prior_val--);
           }
         }
       }
