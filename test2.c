@@ -29,8 +29,8 @@ int PScheduler(void){
 	if (pid > 0) {
             continue;
         } else if ( pid == 0) {
-            printf(1, " - Hello! this is child# %d and I will change my priority to %d \n", getpid(), 60 - 20 * i);
-            set_prior(30 - 10 * i); // Use your own setpriority interface
+            printf(1, " - Hello! this is child# %d and I will change my priority to %d \n", getpid(), i*10);
+            set_prior(i*10); // Use your own setpriority interface
             for (j = 0; j < 50000; j++) {
                 asm("nop");
                 for(k = 0; k < 10000; k++) {

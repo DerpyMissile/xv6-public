@@ -357,6 +357,8 @@ scheduler(void)
         //p->prior_val++;
       //}
 
+      //modify tstart and tfinish somewhere in here(?)
+
 
       for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
         if(otherP->state != RUNNABLE){
@@ -706,5 +708,12 @@ waitpid(int pid, int* status, int options)
 
 void set_prior(int prior_lvl){
   struct proc *curproc = myproc();
-  curproc->prior_val = prior_lvl%32;
+  if(prior_lvl > 31){
+    prior_lvl = 31;
+  }else if(prior_lvl < 0){
+    prior_lvl = 0;
+  }
+  curproc->prior_val = prior_lvl;
+  //when it goes beyond 31, round it down to 31
+  //when it goes beyond 0, round it down to 0
 }
