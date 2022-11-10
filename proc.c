@@ -365,7 +365,7 @@ scheduler(void)
           continue;
         }
         if(otherP->prior_val != lowPriority){
-          if((otherP->prior_val % 31) > 0){
+          if(otherP->prior_val > 0){
             otherP->prior_val--;
           } else {
             otherP->prior_val = 0;
