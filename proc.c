@@ -217,6 +217,7 @@ fork(void)
 
   acquire(&ptable.lock);
   np->t_start = ticks;
+  np->t_burst = 0;
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -329,11 +330,11 @@ scheduler(void)
   struct proc *otherP; 
   struct cpu *c = mycpu();
   c->proc = 0;
+  int lowPriority = 30;
   
   for(;;){
     // Enable interrupts on this processor.
     sti();
-    int lowPriority = 30;
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -606,8 +607,8 @@ exit2(int status)
   // Jump into the scheduler, never to return. 
   curproc->state = ZOMBIE;
   cprintf("The turnaround time: %d \n", (ticks - curproc->t_start));
-  cprintf("The waiting time: %d \n", (curproc->turnaroundTime - curproc->t_burst));
   curproc->turnaroundTime = ticks-curproc->t_start;
+  cprintf("The waiting time: %d \n", (curproc->turnaroundTime - curproc->t_burst));
   sched();
   panic("zombie exit");
 }
