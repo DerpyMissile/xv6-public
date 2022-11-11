@@ -102,7 +102,9 @@ exec(char *path, char **argv)
   switchuvm(curproc);
   freevm(oldpgdir);
 
+
   curproc->t_start = ticks;
+  curproc->t_burst = 0;
   return 0;
 
  bad:

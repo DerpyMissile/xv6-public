@@ -338,14 +338,11 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      //ok so this above 2 lines were round robin's way of doing it, now with prior, we gotta find the lowest prior one
       if(p->prior_val < lowPriority && p->state == RUNNABLE){
         lowPriority = p->prior_val;
       }
     } 
       //modify tstart and tfinish somewhere in here(?)
-
-
       for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
         if(otherP->state != RUNNABLE){
           continue;
@@ -356,6 +353,7 @@ scheduler(void)
           } else {  
             otherP->prior_val = 0;
           }
+          continue;
         }
       
       // Switch to chosen process.  It is the process's job
