@@ -52,7 +52,7 @@ struct proc {
   int exitStatus;
   int prior_val;
   int t_start;
-  int t_finish;
+  int turnaroundTime;
   int t_burst;
 };
 

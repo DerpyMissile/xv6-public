@@ -89,6 +89,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->prior_val = 31;
+  p->t_burst = 0;
 
   release(&ptable.lock);
 
@@ -196,7 +197,6 @@ fork(void)
     np->kstack = 0;
     np->state = UNUSED;
     np->prior_val = curproc->prior_val;
-    np->t_start = ticks;
     return -1;
   }
   np->sz = curproc->sz;
@@ -216,7 +216,7 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
-
+  np->t_start = ticks;
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -369,11 +369,13 @@ scheduler(void)
         otherP->prior_val++;
       }
       swtch(&(c->scheduler), otherP->context);
+      otherP->t_burst++;
       switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+      //cprintf("The waiting time: %d \n", (otherP->turnaroundTime - otherP->t_burst));
       }
     release(&ptable.lock);
   }
@@ -587,7 +589,6 @@ exit2(int status)
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
-  curproc->t_finish = ticks;
 
   acquire(&ptable.lock);
 
@@ -604,7 +605,9 @@ exit2(int status)
   }
   // Jump into the scheduler, never to return. 
   curproc->state = ZOMBIE;
-  cprintf("The turnaroundtime: %d \n", (curproc->t_finish - curproc->t_start));
+  cprintf("The turnaround time: %d \n", (ticks - curproc->t_start));
+  cprintf("The waiting time: %d \n", (curproc->turnaroundTime - curproc->t_burst));
+  curproc->turnaroundTime = ticks-curproc->t_start;
   sched();
   panic("zombie exit");
 }
