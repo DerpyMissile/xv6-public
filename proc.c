@@ -88,6 +88,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->prior_val = 31;
 
   release(&ptable.lock);
 
@@ -194,6 +195,8 @@ fork(void)
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
+    np->prior_val = curproc->prior_val;
+    np->t_start = ticks;
     return -1;
   }
   np->sz = curproc->sz;
@@ -323,9 +326,6 @@ void
 scheduler(void)
 {
   struct proc *p;
-  //struct proc *temp = ptable.proc;
-  //struct proc *temp = ptable.proc;
-  int lowPriority = 100;
   struct proc *otherP; 
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -333,30 +333,15 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
+    int lowPriority = 30;
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      //if(p->state != RUNNABLE){
-        //continue;
-      //}
       //ok so this above 2 lines were round robin's way of doing it, now with prior, we gotta find the lowest prior one
       if(p->prior_val < lowPriority && p->state == RUNNABLE){
         lowPriority = p->prior_val;
       }
-    }
-    
-      // if(p != &ptable.proc[NPROC-1]){
-      //   continue;
-      // }
-      //p = temp;
-
-      //if(p->prior_val == 31){
-        //set_prior(31);
-      //}else{
-        //p->prior_val++;
-      //}
-
+    } 
       //modify tstart and tfinish somewhere in here(?)
 
 
@@ -367,10 +352,9 @@ scheduler(void)
         if(otherP->prior_val != lowPriority){
           if(otherP->prior_val > 0){
             otherP->prior_val--;
-          } else {
+          } else {  
             otherP->prior_val = 0;
           }
-          //continue;
         }
       
       // Switch to chosen process.  It is the process's job
@@ -379,7 +363,11 @@ scheduler(void)
       c->proc = otherP;
       switchuvm(otherP);
       otherP->state = RUNNING;
-      otherP->prior_val++;
+      if(otherP->prior_val == 31){
+        otherP->prior_val = 31;
+      } else {
+        otherP->prior_val++;
+      }
       swtch(&(c->scheduler), otherP->context);
       switchkvm();
 
@@ -599,6 +587,7 @@ exit2(int status)
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
+  curproc->t_finish = ticks;
 
   acquire(&ptable.lock);
 
@@ -613,9 +602,9 @@ exit2(int status)
         wakeup1(initproc);
     }
   }
-
-  // Jump into the scheduler, never to return.
+  // Jump into the scheduler, never to return. 
   curproc->state = ZOMBIE;
+  cprintf("The turnaroundtime: %d \n", (curproc->t_finish - curproc->t_start));
   sched();
   panic("zombie exit");
 }
@@ -714,6 +703,7 @@ void set_prior(int prior_lvl){
     prior_lvl = 0;
   }
   curproc->prior_val = prior_lvl;
+  yield();
   //when it goes beyond 31, round it down to 31
   //when it goes beyond 0, round it down to 0
 }

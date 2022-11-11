@@ -29,15 +29,15 @@ int PScheduler(void){
 	if (pid > 0) {
             continue;
         } else if ( pid == 0) {
-            printf(1, " - Hello! this is child# %d and I will change my priority to %d \n", getpid(), i*10);
-            set_prior(i*10); // Use your own setpriority interface
+            printf(1, " - Hello! this is child# %d and I will change my priority to %d \n", getpid(), (i*10)+1);
+            set_prior((i*10)+1); // Use your own setpriority interface
             for (j = 0; j < 50000; j++) {
                 asm("nop");
                 for(k = 0; k < 10000; k++) {
                     asm("nop"); 
                 }
             }
-            printf(1, " - Child #%d with priority %d has finished! \n", getpid(), 30-10*i);		
+            printf(1, " - Child #%d with priority %d has finished! \n", getpid(), (i*10)+1);		
             exit2(0);
         } else {
             printf(2," \n Error fork() \n");
