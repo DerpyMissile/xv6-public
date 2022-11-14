@@ -1,0 +1,337 @@
+diff --git a/Makefile b/Makefile
+index e0e9b9a..75a11c0 100644
+--- a/Makefile
++++ b/Makefile
+@@ -182,7 +182,7 @@ UPROGS=\
+ 	_usertests\
+ 	_wc\
+ 	_zombie\
+-	_test\
++	_test2\
+ 
+ fs.img: mkfs README $(UPROGS)
+ 	./mkfs fs.img README $(UPROGS)
+@@ -219,7 +219,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
+ 	then echo "-gdb tcp::$(GDBPORT)"; \
+ 	else echo "-s -p $(GDBPORT)"; fi)
+ ifndef CPUS
+-CPUS := 2
++CPUS := 1
+ endif
+ QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA)
+ 
+diff --git a/defs.h b/defs.h
+index 4d02e13..dc66555 100644
+--- a/defs.h
++++ b/defs.h
+@@ -124,6 +124,7 @@ void            hello(void); // J.H.
+ void            exit2(int status);
+ int             wait2(int *status);
+ int             waitpid(int pid, int *status, int options);
++void            set_prior(int prior_lvl);
+ 
+ // swtch.S
+ void            swtch(struct context**, struct context*);
+diff --git a/exec.c b/exec.c
+index b40134f..1e1d759 100644
+--- a/exec.c
++++ b/exec.c
+@@ -101,6 +101,10 @@ exec(char *path, char **argv)
+   curproc->tf->esp = sp;
+   switchuvm(curproc);
+   freevm(oldpgdir);
++
++
++  curproc->t_start = ticks;
++  curproc->t_burst = 0;
+   return 0;
+ 
+  bad:
+diff --git a/proc.c b/proc.c
+index af108bb..5399eec 100644
+--- a/proc.c
++++ b/proc.c
+@@ -88,6 +88,8 @@ allocproc(void)
+ found:
+   p->state = EMBRYO;
+   p->pid = nextpid++;
++  p->prior_val = 31;
++  p->t_burst = 0;
+ 
+   release(&ptable.lock);
+ 
+@@ -194,6 +196,7 @@ fork(void)
+     kfree(np->kstack);
+     np->kstack = 0;
+     np->state = UNUSED;
++    np->prior_val = curproc->prior_val;
+     return -1;
+   }
+   np->sz = curproc->sz;
+@@ -213,7 +216,8 @@ fork(void)
+   pid = np->pid;
+ 
+   acquire(&ptable.lock);
+-
++  np->t_start = ticks;
++  np->t_burst = 0;
+   np->state = RUNNABLE;
+ 
+   release(&ptable.lock);
+@@ -323,35 +327,56 @@ void
+ scheduler(void)
+ {
+   struct proc *p;
++  struct proc *otherP; 
+   struct cpu *c = mycpu();
+   c->proc = 0;
++  int lowPriority = 30;
+   
+   for(;;){
+     // Enable interrupts on this processor.
+     sti();
+-
+     // Loop over process table looking for process to run.
+     acquire(&ptable.lock);
+     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+-      if(p->state != RUNNABLE)
+-        continue;
+-
++      if(p->prior_val < lowPriority && p->state == RUNNABLE){
++        lowPriority = p->prior_val;
++      }
++    } 
++      //modify tstart and tfinish somewhere in here(?)
++      for(otherP = ptable.proc; otherP < &ptable.proc[NPROC]; otherP++){
++        if(otherP->state != RUNNABLE){
++          continue;
++        }
++        if(otherP->prior_val != lowPriority){
++          if(otherP->prior_val > 0){
++            otherP->prior_val--;
++          } else {  
++            otherP->prior_val = 0;
++          }
++          continue;
++        }
++      
+       // Switch to chosen process.  It is the process's job
+       // to release ptable.lock and then reacquire it
+       // before jumping back to us.
+-      c->proc = p;
+-      switchuvm(p);
+-      p->state = RUNNING;
+-
+-      swtch(&(c->scheduler), p->context);
++      c->proc = otherP;
++      switchuvm(otherP);
++      otherP->state = RUNNING;
++      if(otherP->prior_val == 31){
++        otherP->prior_val = 31;
++      } else {
++        otherP->prior_val++;
++      }
++      swtch(&(c->scheduler), otherP->context);
++      otherP->t_burst++;
+       switchkvm();
+ 
+       // Process is done running for now.
+       // It should have changed its p->state before coming back.
+       c->proc = 0;
+-    }
++      //cprintf("The waiting time: %d \n", (otherP->turnaroundTime - otherP->t_burst));
++      }
+     release(&ptable.lock);
+-
+   }
+ }
+ 
+@@ -577,9 +602,11 @@ exit2(int status)
+         wakeup1(initproc);
+     }
+   }
+-
+-  // Jump into the scheduler, never to return.
++  // Jump into the scheduler, never to return. 
+   curproc->state = ZOMBIE;
++  cprintf("The turnaround time: %d \n", (ticks - curproc->t_start));
++  curproc->turnaroundTime = ticks-curproc->t_start;
++  cprintf("The waiting time: %d \n", (curproc->turnaroundTime - curproc->t_burst));
+   sched();
+   panic("zombie exit");
+ }
+@@ -668,4 +695,17 @@ waitpid(int pid, int* status, int options)
+     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+   }
++}
++
++void set_prior(int prior_lvl){
++  struct proc *curproc = myproc();
++  if(prior_lvl > 31){
++    prior_lvl = 31;
++  }else if(prior_lvl < 0){
++    prior_lvl = 0;
++  }
++  curproc->prior_val = prior_lvl;
++  yield();
++  //when it goes beyond 31, round it down to 31
++  //when it goes beyond 0, round it down to 0
+ }
+\ No newline at end of file
+diff --git a/proc.h b/proc.h
+index 2986be4..a8eca65 100644
+--- a/proc.h
++++ b/proc.h
+@@ -50,6 +50,10 @@ struct proc {
+   struct inode *cwd;           // Current directory
+   char name[16];               // Process name (debugging)
+   int exitStatus;
++  int prior_val;
++  int t_start;
++  int turnaroundTime;
++  int t_burst;
+ };
+ 
+ // Process memory is laid out contiguously, low addresses first:
+diff --git a/syscall.c b/syscall.c
+index 472d56f..a681fda 100644
+--- a/syscall.c
++++ b/syscall.c
+@@ -107,6 +107,7 @@ extern int sys_hello(void); // J.H.
+ extern int sys_exit2(void);
+ extern int sys_wait2(void);
+ extern int sys_waitpid(void);
++extern int sys_set_prior(void);
+ 
+ static int (*syscalls[])(void) = {
+ [SYS_fork]    sys_fork,
+@@ -134,6 +135,7 @@ static int (*syscalls[])(void) = {
+ [SYS_exit2]   sys_exit2,
+ [SYS_wait2]   sys_wait2,
+ [SYS_waitpid] sys_waitpid,
++[SYS_set_prior] sys_set_prior,
+ };
+ 
+ void
+diff --git a/syscall.h b/syscall.h
+index cce4728..ef569bb 100644
+--- a/syscall.h
++++ b/syscall.h
+@@ -23,4 +23,5 @@
+ #define SYS_hello  22  // J.H.
+ #define SYS_exit2  23
+ #define SYS_wait2  24
+-#define SYS_waitpid 25
+\ No newline at end of file
++#define SYS_waitpid 25
++#define SYS_set_prior 26
+\ No newline at end of file
+diff --git a/sysproc.c b/sysproc.c
+index 195aa86..170dda4 100644
+--- a/sysproc.c
++++ b/sysproc.c
+@@ -131,4 +131,14 @@ int sys_waitpid(void){
+       return -1;
+ 
+   return waitpid(pid, status, option);
++}
++
++int sys_set_prior(void){
++  int prior_lvl;
++  if(argint(0, &prior_lvl) < 0){
++    return -1;
++  }
++
++  set_prior(prior_lvl);
++  return 0;
+ }
+\ No newline at end of file
+diff --git a/test2.c b/test2.c
+new file mode 100644
+index 0000000..20c2c64
+--- /dev/null
++++ b/test2.c
+@@ -0,0 +1,57 @@
++#include "types.h"
++#include "user.h"
++
++int PScheduler(void);
++
++int main(int argc, char *argv[])
++{
++    PScheduler();
++
++    return exit2(0);
++}    
++      
++int PScheduler(void){
++		 
++    // Use this part to test the priority scheduler. Assuming that the priorities range between range between 0 to 31
++    // 0 is the highest priority. All processes have a default priority of 10
++    // You can use your own priority range/value setup
++
++    int pid, ret_pid, exit_status;
++    int i,j,k;
++  
++    printf(1, "Testing the priority scheduler and setpriority system call:\n");
++    printf(1, "Assuming that the priorities range between range between 0 to 31\n");
++    printf(1, "0 is the highest priority. All processes have a default priority of 10\n");
++    printf(1, " - The parent processes will switch to priority 0\n");
++    set_prior(0); // Use your own setpriority interface
++    for (i = 0; i < 3; i++) {
++	pid = fork();
++	if (pid > 0) {
++            continue;
++        } else if ( pid == 0) {
++            printf(1, " - Hello! this is child# %d and I will change my priority to %d \n", getpid(), (i*10)+1);
++            set_prior((i*10)+1); // Use your own setpriority interface
++            for (j = 0; j < 50000; j++) {
++                asm("nop");
++                for(k = 0; k < 10000; k++) {
++                    asm("nop"); 
++                }
++            }
++            printf(1, " - Child #%d with priority %d has finished! \n", getpid(), (i*10)+1);		
++            exit2(0);
++        } else {
++            printf(2," \n Error fork() \n");
++            exit2(-1);
++        }
++    }
++
++    if(pid > 0) {
++        for (i = 0; i < 3; i++) {
++            ret_pid = wait2(&exit_status);
++            printf(1, " - This is the parent: child with PID# %d has finished with status %d \n", ret_pid, exit_status);
++        }
++        printf(1, " - If processes with highest priority finished first then its correct. \n");
++    }
++			
++    return 0;
++}
+diff --git a/user.h b/user.h
+index 9b8e268..d18d524 100644
+--- a/user.h
++++ b/user.h
+@@ -27,6 +27,7 @@ int hello(int); // J.H.
+ int exit2(int status);
+ int wait2(int *status);
+ int waitpid(int pid, int *status, int options);
++int set_prior(int prior_lvl);
+ 
+ // ulib.c
+ int stat(const char*, struct stat*);
+diff --git a/usys.S b/usys.S
+index a3d44d8..57dcf10 100644
+--- a/usys.S
++++ b/usys.S
+@@ -32,4 +32,5 @@ SYSCALL(uptime)
+ SYSCALL(hello) // J.H.
+ SYSCALL(exit2)
+ SYSCALL(wait2)
+-SYSCALL(waitpid)
+\ No newline at end of file
++SYSCALL(waitpid)
++SYSCALL(set_prior)
+\ No newline at end of file
